@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src='./index.js' type="module"></script>
+</head>
+
+<body>
+    <div id="app"></div>
+    <div id="lexer"></div>
+
+    <template id="tpl">
+        <!---use="Hello"---><!---/--->
+        <!---loop="new Array(times).fill(null)"--->
+        <ol>
+            <!---loop<value,index>="list"--->
+            <li>
+                <!---
+                        case-break="value.type === 'text'"
+                        {click}="()=>alert(list.length)"
+                        [style]="'color:red'"
+                        --->
+                <span>{{value.text}}</span>
+                <!--#
+                        costom 
+                        case-break="value.type === 'input'"
+                        [value]="value.value"
+                    --->
+                <input type="text" />
+                <!--#case-break--->
+                <b style="color:rgb(90, 80, 80)">Error Value</b>
+                <!---/--->
+            </li>
+            <!---/--->
+        </ol>
+        <!---/--->
+    </template>
+
+
+    <template id="hello">
+        <!---loop<value,index>="list"--->
+        <h3 style="padding:  0 20px;">
+            Hello {{value}} !!!
+        </h3>
+        <!---/--->
+    </template>
+</body>
+
+</html>
