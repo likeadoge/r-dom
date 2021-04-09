@@ -1,12 +1,14 @@
 
 
 export class ReactZone {
+    #deps = []
     #input = []
     #output = null
-    #transform = (...args) => args
+    #fn = (...args) => args
+
 }
 
 
 export class Watcher {
-    
+
 }
