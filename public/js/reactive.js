@@ -35,7 +35,7 @@ export class Effect {
     }
 }
 
-export class ReactZone extends Reactive {
+export class Computed extends Reactive {
 
     #inputs = []
     #fn = (...args) => args
