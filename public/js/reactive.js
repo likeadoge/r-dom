@@ -10,12 +10,18 @@ export class Reactive {
         this.#val = val
     }
 
-    get() {
+    getVal() {
         return this.#val
     }
-    set(newVal) {
+
+    setVal(newVal) {
         this.#val = newVal
-        this.#watcher.forEach(v => v[emit]())
+        this.#watcher.forEach(v => v[emit](this))
+    }
+
+    updateVal(fn) {
+        const newVal = fn(this.#val)
+        this.setVal(newVal)
     }
 
     attach(watcher) {
@@ -52,11 +58,11 @@ export class Computed extends Reactive {
     }
 
     #update() {
-        this.set(
+        super.setVal(
             this.#fn(
                 ...this.#inputs.map(
                     v => v instanceof Reactive
-                        ? v.get()
+                        ? v.getVal()
                         : v
                 )
             )
@@ -65,5 +71,76 @@ export class Computed extends Reactive {
 
     [emit]() {
         this.#update()
+    }
+}
+
+
+export class ReactMap extends Reactive {
+
+    #map = new Map()
+
+    #deps = new Map()
+
+    constructor() {
+        super(new Map())
+    }
+
+    set(key, value) {
+
+        if (this.#map.has(key)) this.delete(key)
+
+        this.#map.set(key, val)
+
+        if (value instanceof Reactive) {
+            this.#deps.set((this.#deps.get(value) || []).concat([key]))
+        }
+
+        super.updateVal(map => {
+            map.set(key, value instanceof Reactive ? value.get() : value)
+            return map
+        })
+
+        // 返回当前实例，以实现链式调用
+        return this
+    }
+
+    get(key) {
+        return this.#map.get(key)
+    }
+
+    delete(key) {
+        if (!this.#map.has(key)) return
+
+        const r = this.#map.get(key)
+
+        if (r instanceof Reactive) {
+            const keys = this.#deps.get(r).getVal().filter(v => v !== key)
+
+            if (keys.length > 0) {
+                this.#deps.set(r, keys)
+            } else {
+                this.#deps.delete(r)
+                r.detach(this)
+            }
+        }
+
+        this.#map.delete(r)
+
+        super.updateVal(map => {
+            map.delete(key)
+            return map
+        })
+
+    }
+
+    [emit](r) {
+        const keys = this.#deps
+        const newVal = r.get().get(r) || []
+
+        super.updateVal(map => {
+            keys.forEach(key => { map.set(key, newVal) })
+            return map
+        })
+
     }
 }
