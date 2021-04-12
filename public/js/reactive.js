@@ -74,7 +74,6 @@ export class Computed extends Reactive {
     }
 }
 
-
 export class ReactMap extends Reactive {
 
     #map = new Map()
