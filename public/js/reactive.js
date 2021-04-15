@@ -44,22 +44,32 @@ export class Effect {
 export class Computed extends Reactive {
 
     #inputs = []
-    #fn = (...args) => args
-
+    #getter = (...args) => args
+    #setter = null
     #deps = []
 
-    constructor(inputs, fn) {
+    constructor(
+        inputs,
+        getter = (...args) => args,
+        setter = null
+    ) {
         super()
+        
         this.#inputs = inputs
-        this.#fn = fn
+        this.#getter = getter
+        this.#setter = setter
+
         this.#deps = inputs.filter(v => v instanceof Reactive)
+        // 在依赖数据上添加监听
         this.#deps.forEach(v => v.attach(this))
+        // 更新当前数据
         this.#update()
     }
 
+    // 当前数据更新方法
     #update() {
         super.setVal(
-            this.#fn(
+            this.#getter(
                 ...this.#inputs.map(
                     v => v instanceof Reactive
                         ? v.getVal()
@@ -69,8 +79,21 @@ export class Computed extends Reactive {
         )
     }
 
+    setVal(newVal) {
+        // 如果不存在 setter ，报错
+        if (!this.#setter) throw new Error(`Computed: setter is not exist!`)
+        // 存在 setter 则调用 setter
+        this.#setter(newVal)
+    }
+
+    // 监听数据更新则调用 #update，更新当前数据 
     [emit]() {
         this.#update()
+    }
+
+    // Computed 特有的注销方法
+    destory(){
+        this.#deps.forEach(v=>v.detach(this))
     }
 }
 
@@ -143,3 +166,15 @@ export class ReactMap extends Reactive {
 
     }
 }
+
+
+
+const a = new Reactive(0)
+
+const double_a = new Reactive(a.getVal() * 2)
+
+const eff = new Effect(() => {
+    double_a.setVal(a.getVal() * 2)
+})
+
+a.attach(eff)
