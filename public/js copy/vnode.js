@@ -6,7 +6,6 @@ export class VNode {
     constructor(node) {
         this.#node = node
     }
-    setNode(node) { this.#node = node }
     getNode() { return this.#node }
 }
 
@@ -113,81 +112,3 @@ export class VElementNode extends VNode {
 }
 
 
-
-export class VNodeList {
-    #list = []
-
-    setList(list) { this.#list = list }
-    getList() { return this.#list }
-
-    getNodeList() { return this.#list.map(v => v.getNode()) }
-}
-
-
-export class VNodeGroup extends VNodeList {
-    #group = []
-
-    constructor(group) {
-        super()
-        this.#group = group
-        super.setList(this.#group.flatMap(v =>
-            v instanceof VNodeList
-                ? v.getList()
-                : v
-        ))
-    }
-}
-
-
-export class VNodeCase extends VNodeList {
-    #val = false
-    #list = null
-
-    constructor(val, vNodeList) {
-        super()
-        this.#list = vNodeList
-        this.setVal(val)
-    }
-
-    setVal(val) {
-        this.#val = val
-        if (this.#val)
-            super.setList(this.#list.getList())
-        else
-            super.setList([])
-    }
-}
-
-export class VNodeCase extends VNodeList {
-    #vals = []
-    #createNodeList = () => { }
-    #createKey = () => { }
-    #cache = new Map()
-
-    constructor(
-        vals,
-        createNodeList,
-        createKey = () => Math.random(),
-    ) {
-        super()
-        this.#createKey = createKey
-        this.#createNodeList = createNodeList
-        this.setVals(vals)
-    }
-
-    setVals(vals) {
-        this.#vals = Array.from(vals)
-        const newCache = new Map()
-
-        super.setList(this.#vals.flatMap((val, index) => {
-            const key = this.#createKey(val, index)
-            const nodeList = this.#cache.has(key)
-                ? this.#cache.get(key)
-                : this.#createNodeList(val, index)
-            newCache.set(key, nodeList)
-            return nodeList.getList()
-        }))
-
-        this.#cache = newCache
-    }
-}
