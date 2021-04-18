@@ -54,7 +54,7 @@ export class Computed extends Reactive {
         setter = null
     ) {
         super()
-        
+
         this.#inputs = inputs
         this.#getter = getter
         this.#setter = setter
@@ -92,8 +92,8 @@ export class Computed extends Reactive {
     }
 
     // Computed 特有的注销方法
-    destory(){
-        this.#deps.forEach(v=>v.detach(this))
+    destory() {
+        this.#deps.forEach(v => v.detach(this))
     }
 }
 
@@ -111,7 +111,7 @@ export class ReactMap extends Reactive {
 
         if (this.#map.has(key)) this.delete(key)
 
-        this.#map.set(key, val)
+        this.#map.set(key, value)
 
         if (value instanceof Reactive) {
             this.#deps.set((this.#deps.get(value) || []).concat([key]))
@@ -167,7 +167,20 @@ export class ReactMap extends Reactive {
     }
 }
 
+export class ReactList extends Reactive{
 
+    #list = []
+
+    #deps = []
+
+    constructor(){
+        super([])
+    }
+
+    set(list){
+        this.list2
+    }
+}
 
 const a = new Reactive(0)
 
