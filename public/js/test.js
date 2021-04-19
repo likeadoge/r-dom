@@ -3,10 +3,12 @@ import { RElementNode, RNodeGroup, RNodeLoop, RTextNode } from './rnode.js'
 
 class Cell {
 
-    top = 0
-    bottom = 0
-    left = 0
-    right = 0
+    pos = new Reactive({
+        top: 0,
+        bottom: 0,
+        left: 0,
+        right: 0
+    })
 
     hover = new Reactive(false)
 
@@ -17,6 +19,8 @@ class Cell {
     static row = new Reactive(5)
 
     static col = new Reactive(5)
+
+    static prepare = new Reactive(null)
 
     static init() {
         const reflow = new Effect(() => {
@@ -35,8 +39,9 @@ class Cell {
         Cell.all.updateVal(old => {
 
             // 删除超出范围的单元格
-            const remains = old.filter(({ right, bottom }) => {
-                return right >= colLength || bottom >= rowLength
+            const remains = old.filter(({ pos }) => {
+                const { right, bottom } = pos.getVal()
+                return !(right >= colLength || bottom >= rowLength)
             })
 
             // 添加覆盖不到的单元格
@@ -44,8 +49,10 @@ class Cell {
                 .flatMap((_, row) => new Array(colLength).fill(0)
                     .map((_, col) => ({ col, row })))
                 .filter(({ row, col }) => remains.findIndex(cell => {
-                    const hor = cell.left <= col && cell.right >= col
-                    const ver = cell.top <= row && cell.bottom >= row
+                    const pos = cell.pos.getVal()
+
+                    const hor = pos.left <= col && pos.right >= col
+                    const ver = pos.top <= row && pos.bottom >= row
 
                     return hor && ver
                 }) < 0)
@@ -66,21 +73,44 @@ class Cell {
 
         this.id = 'c_' + Math.ceil(Math.random() * 100000)
 
-        this.top = top
-        this.left = left
-        this.bottom = bottom
-        this.right = right
+        this.pos.setVal({ top, bottom, left, right })
 
-        Cell.all.updateVal(list => [this].concat(list.filter(({ left, right, bottom, top }) => {
-            const hor = (left >= this.left && left <= this.right)
-                || (right >= this.left && right <= this.right)
+        this.#update()
 
-            const ver = (top >= this.top && top <= this.bottom)
-                || (bottom >= this.top && bottom <= this.bottom)
+    }
+
+    merge(cell) {
+        const min = (a, b) => a < b ? a : b
+        const max = (a, b) => a > b ? a : b
+
+        const pos0 = cell.pos.getVal()
+        const pos1 = this.pos.getVal()
+
+        this.pos.setVal({
+            left: min(pos0.left, pos1.left),
+            right: max(pos0.right, pos1.right),
+            top: min(pos0.top, pos1.top),
+            bottom: max(pos0.bottom, pos1.bottom),
+        })
+        
+        this.#update()
+
+        Cell.reflow()
+    }
+
+    #update() {
+        Cell.all.updateVal(list => [this].concat(list.filter((target) => {
+            const { left, top, bottom, right } = target.pos.getVal()
+            const pos = this.pos.getVal()
+
+            const hor = (left >= pos.left && left <= pos.right)
+                || (right >= pos.left && right <= pos.right)
+
+            const ver = (top >= pos.top && top <= pos.bottom)
+                || (bottom >= pos.top && bottom <= pos.bottom)
 
             return !(hor && ver)
         })))
-
     }
 
 }
@@ -88,28 +118,39 @@ class Cell {
 Cell.init()
 
 const cells = new RNodeGroup([
-    new RNodeLoop(Cell.all, ({ left, right, top, bottom, hover }) => new RNodeGroup([
+    new RNodeLoop(Cell.all, (c) => new RNodeGroup([
         new RElementNode({
             tag: 'div',
             event: new ReactMap()
                 .set('mouseenter', () => {
-                    console.log('mouseenter')
-                    hover.setVal(true)
+                    c.hover.setVal(true)
                 })
                 .set('mouseleave', () => {
-                    console.log('mouseleave')
-                    hover.setVal(false)
+                    c.hover.setVal(false)
+                })
+                .set('click', () => {
+                    const cell = Cell.prepare.getVal()
+                    if (!cell)
+                        return Cell.prepare.setVal(c)
+                    else{
+                        cell.merge(c)
+                        Cell.prepare.setVal(null)
+                    }
+                    
                 }),
             style: new ReactMap()
-                .set('grid-column-start', left + 1)
-                .set('grid-column-end', right + 2)
-                .set('grid-row-start', top + 1)
-                .set('grid-row-end', bottom + 2)
+                .set('gridArea', new Computed([c.pos], ({
+                    left, right, bottom, top
+                }) => `${top + 1}/${left + 1}/${bottom + 2}/${right + 2}`))
                 .set('transition', 'all 0.3s ease-out')
                 .set('textAlign', "center")
                 .set('cursor', 'pointer')
-                .set('opacity', new Computed([hover], h => h ? '0.4' : '1'))
+                .set('opacity', new Computed([c.hover], h => h ? '0.4' : '1'))
                 .set('background', '#66ccff')
+                .set('outline', new Computed([Cell.prepare], cell => cell === c
+                    ? `4px solid red`
+                    : `4px solid transparent`
+                ))
                 .set('color', '#fff'),
 
             attr: new ReactMap(),
@@ -131,8 +172,6 @@ const grid = new RElementNode({
     attr: new ReactMap(),
     children: cells
 })
-
-console.log(cells)
 
 document.body.appendChild(grid.getNode())
 

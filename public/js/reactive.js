@@ -159,7 +159,6 @@ export class ReactMap extends Reactive {
     [emit](r) {
         const keys = this.#deps.get(r) || []
         const newVal = r.getVal()
-        console.log('weak update')
         super.updateVal(map => {
             keys.forEach(key => { map.set(key, newVal) })
             return map

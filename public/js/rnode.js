@@ -136,7 +136,6 @@ export class RElementNode extends VNode {
     }
 
     #updateChildren() {
-        console.log('update', this)
         this.#childrenCache.forEach(node => {
             this.getNode().removeChild(node)
         })
