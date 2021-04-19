@@ -22,6 +22,7 @@ export class RTextNode extends VNode {
         super(document.createTextNode(''))
         this.#text = text instanceof Reactive ? text : new Reactive(text)
         this.#text.attach(this)
+        this.#updateText()
     }
 
     #updateText() {
@@ -71,6 +72,7 @@ export class RElementNode extends VNode {
         this.#style.attach(this)
         this.#event.attach(this)
         this.#attr.attach(this)
+        this.#children.attach(this)
 
         this.#updateAttr()
         this.#updateEvent()
@@ -86,19 +88,21 @@ export class RElementNode extends VNode {
                 return this.#updateEvent()
             case this.#style:
                 return this.#updateStyle()
+            case this.#children:
+                return this.#updateChildren()
             default:
                 throw new Error('RElementNode: update Error!')
         }
     }
 
     #updateEvent() {
-        Array.from(this.#eventCache.entries()).forEach((type, listener) => {
+        Array.from(this.#eventCache.entries()).forEach(([type, listener]) => {
             this.getNode().removeEventListener(type, listener)
         })
 
         this.#eventCache.clear()
 
-        Array.from(this.#event.getVal().entries()).forEach((type, listener) => {
+        Array.from(this.#event.getVal().entries()).forEach(([type, listener]) => {
             this.getNode().addEventListener(type, listener)
             this.#eventCache.set(type, listener)
         })
@@ -106,13 +110,13 @@ export class RElementNode extends VNode {
 
     #updateStyle() {
 
-        Array.from(this.#styleCache.entries()).forEach((type, listener) => {
+        Array.from(this.#styleCache.entries()).forEach((property, value) => {
             this.getNode().style[property] = ''
         })
 
         this.#styleCache.clear()
 
-        Array.from(this.#style.getVal().entries()).forEach((property, value) => {
+        Array.from(this.#style.getVal().entries()).forEach(([property, value]) => {
             this.getNode().style[property] = value
             this.#styleCache.set(property, value)
         })
@@ -132,13 +136,14 @@ export class RElementNode extends VNode {
     }
 
     #updateChildren() {
+        console.log('update', this)
         this.#childrenCache.forEach(node => {
-            this.current.removeChild(node)
+            this.getNode().removeChild(node)
         })
 
         this.#childrenCache.length = 0
 
-        this.#children.forEach(v => {
+        this.#children.getList().forEach(v => {
             this.getNode().appendChild(v.getNode())
             this.#childrenCache.push(v.getNode())
         })
@@ -185,11 +190,11 @@ export class RNodeGroup extends RNodeList {
 
     #update() {
         super.setList(
-            this.#group.flatMap(v => {
-                v instanceof RNodeList
+            this.#group.flatMap(
+                v => v instanceof RNodeList
                     ? v.getList()
-                    : v
-            })
+                    : [v]
+            )
         )
     }
 
@@ -240,10 +245,11 @@ export class RNodeLoop extends RNodeList {
         createKey = () => Math.random(),
     ) {
         super()
+        this.#vals = vals instanceof Reactive ? vals : new Reactive(vals)
         this.#createKey = createKey
         this.#createNodeList = createNodeList
-        this.setVals(vals)
 
+        this.#vals.attach(this)
         this.#update()
     }
 
@@ -252,7 +258,7 @@ export class RNodeLoop extends RNodeList {
         const vals = Array.from(this.#vals.getVal())
         const newCache = new Map()
 
-        Array.from(this.#cache.values()).forEach(v=>v.detach(this))
+        Array.from(this.#cache.values()).forEach(v => v.detach(this))
 
         super.setList(vals.flatMap((val, index) => {
             const key = this.#createKey(val, index)
@@ -261,16 +267,16 @@ export class RNodeLoop extends RNodeList {
                 : this.#createNodeList(val, index)
 
             rNodeList.attach(this)
-            newCache.set(key, nodeList)
-            return nodeList.getList()
+            newCache.set(key, rNodeList)
+            return rNodeList.getList()
         }))
 
         this.#cache = newCache
     }
 
-    destory(){
+    destory() {
         this.#vals.detach(this)
-        Array.from(this.#cache.values()).forEach(v=>v.detach(this))
+        Array.from(this.#cache.values()).forEach(v => v.detach(this))
     }
 
     [emit]() { this.#update() }

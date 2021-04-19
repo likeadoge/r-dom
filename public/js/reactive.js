@@ -16,7 +16,7 @@ export class Reactive {
 
     setVal(newVal) {
         this.#val = newVal
-        this.#watcher.forEach(v => v[emit](this))
+        this.#watchers.forEach(v => v[emit](this))
     }
 
     updateVal(fn) {
@@ -114,11 +114,12 @@ export class ReactMap extends Reactive {
         this.#map.set(key, value)
 
         if (value instanceof Reactive) {
-            this.#deps.set((this.#deps.get(value) || []).concat([key]))
+            value.attach(this)
+            this.#deps.set(value, (this.#deps.get(value) || []).concat([key]))
         }
 
         super.updateVal(map => {
-            map.set(key, value instanceof Reactive ? value.get() : value)
+            map.set(key, value instanceof Reactive ? value.getVal() : value)
             return map
         })
 
@@ -156,9 +157,9 @@ export class ReactMap extends Reactive {
     }
 
     [emit](r) {
-        const keys = this.#deps
-        const newVal = r.get().get(r) || []
-
+        const keys = this.#deps.get(r) || []
+        const newVal = r.getVal()
+        console.log('weak update')
         super.updateVal(map => {
             keys.forEach(key => { map.set(key, newVal) })
             return map

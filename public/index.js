@@ -1,1 +1,1 @@
-import './js_old/test.js'
+import './js/test.js'
