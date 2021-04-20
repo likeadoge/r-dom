@@ -1,6 +1,6 @@
 import { Computed, Effect, Reactive, ReactMap } from './reactive.js'
 import { RElementNode, RNodeGroup, RNodeLoop, RTextNode } from './rnode.js'
-
+import { log, log_node } from './log.js'
 class Cell {
 
     pos = new Reactive({
@@ -29,6 +29,15 @@ class Cell {
         Cell.row.attach(reflow)
         Cell.col.attach(reflow)
         Cell.reflow()
+
+        Cell.row.attach(new Effect(()=>{
+            log('row',`change to ${Cell.row.getVal()}`)
+        }))
+
+        Cell.col.attach(new Effect(()=>{
+            log('col',`change to ${Cell.col.getVal()}`)
+        }))
+
     }
 
     static reflow() {
@@ -58,6 +67,7 @@ class Cell {
                 }) < 0)
                 .map(({ row, col }) => Cell.genSingle(row, col))
 
+            log('reflow', `add ${other.length} cells`)
             return remains.concat(other)
         })
 
@@ -80,11 +90,18 @@ class Cell {
     }
 
     merge(cell) {
+
         const min = (a, b) => a < b ? a : b
         const max = (a, b) => a > b ? a : b
 
         const pos0 = cell.pos.getVal()
         const pos1 = this.pos.getVal()
+
+        log('merge',`${
+            [pos0.left,pos0.right,pos0.top,pos0.bottom].join('/')
+        } to ${
+            [pos1.left,pos1.right,pos1.top,pos1.bottom].join('/')
+        } `)
 
         this.pos.setVal({
             left: min(pos0.left, pos1.left),
@@ -118,13 +135,14 @@ class Cell {
 Cell.init()
 
 const btnStyle = new ReactMap()
-    .set('height','40px')
+    .set('height', '40px')
 
 const add_row_btn = new RElementNode({
     tag: "button",
-    style:btnStyle,
+    style: btnStyle,
     event: new ReactMap()
         .set('click', () => {
+            log('action','add row')
             Cell.row.updateVal(v => v + 1)
         }),
     children: new RNodeGroup([
@@ -134,9 +152,10 @@ const add_row_btn = new RElementNode({
 
 const add_col_btn = new RElementNode({
     tag: "button",
-    style:btnStyle,
+    style: btnStyle,
     event: new ReactMap()
         .set('click', () => {
+            log('action','add col')
             Cell.col.updateVal(v => v + 1)
         }),
     children: new RNodeGroup([
@@ -146,9 +165,10 @@ const add_col_btn = new RElementNode({
 
 const reset_btn = new RElementNode({
     tag: "button",
-    style:btnStyle,
+    style: btnStyle,
     event: new ReactMap()
         .set('click', () => {
+            log('action','reset')
             Cell.all.setVal([])
             Cell.col.setVal(5)
             Cell.row.setVal(5)
@@ -225,7 +245,7 @@ const grid = new RElementNode({
         .set("gridArea", 'grid')
         .set('gridTemplateColumns ', new Computed([Cell.col], v => `repeat(${v},auto)`))
         .set('gridTemplateRows ', new Computed([Cell.row], v => `repeat(${v}, auto)`))
-        .set('height', new Computed([Cell.row], v => `${v * 48 - 8}px`))
+        .set('height', '100%')//new Computed([Cell.row], v => `${v * 48 - 8}px`))
         .set('gridColumnGap', '8px')
         .set('gridRowGap', '8px'),
     attr: new ReactMap(),
@@ -248,12 +268,16 @@ const container = new RElementNode({
     event: new ReactMap(),
     style: new ReactMap()
         .set('display', 'grid')
-        .set('gridTemplateAreas', `". . ."  "text text text" "grid grid grid"`)
+        .set('gridTemplateAreas', `"log . . ."  "log text text text" "log grid grid grid"`)
+        .set('gridTemplateColumns', `240px 1fr 1fr 1fr`)
+        .set('gridTemplateRows', `40px 18px 1fr`)
         .set('gridColumnGap', '8px')
         .set('gridRowGap', '8px')
+        .set('height', '100%')
     ,
     attr: new ReactMap(),
     children: new RNodeGroup([
+        log_node,
         add_col_btn,
         add_row_btn,
         reset_btn,

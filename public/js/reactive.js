@@ -166,28 +166,3 @@ export class ReactMap extends Reactive {
 
     }
 }
-
-export class ReactList extends Reactive{
-
-    #list = []
-
-    #deps = []
-
-    constructor(){
-        super([])
-    }
-
-    set(list){
-        this.list2
-    }
-}
-
-const a = new Reactive(0)
-
-const double_a = new Reactive(a.getVal() * 2)
-
-const eff = new Effect(() => {
-    double_a.setVal(a.getVal() * 2)
-})
-
-a.attach(eff)
