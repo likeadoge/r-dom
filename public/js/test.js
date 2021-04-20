@@ -92,7 +92,7 @@ class Cell {
             top: min(pos0.top, pos1.top),
             bottom: max(pos0.bottom, pos1.bottom),
         })
-        
+
         this.#update()
 
         Cell.reflow()
@@ -117,6 +117,48 @@ class Cell {
 
 Cell.init()
 
+const btnStyle = new ReactMap()
+    .set('height','40px')
+
+const add_row_btn = new RElementNode({
+    tag: "button",
+    style:btnStyle,
+    event: new ReactMap()
+        .set('click', () => {
+            Cell.row.updateVal(v => v + 1)
+        }),
+    children: new RNodeGroup([
+        new RTextNode({ text: 'add row' })
+    ])
+})
+
+const add_col_btn = new RElementNode({
+    tag: "button",
+    style:btnStyle,
+    event: new ReactMap()
+        .set('click', () => {
+            Cell.col.updateVal(v => v + 1)
+        }),
+    children: new RNodeGroup([
+        new RTextNode({ text: 'add col' })
+    ])
+})
+
+const reset_btn = new RElementNode({
+    tag: "button",
+    style:btnStyle,
+    event: new ReactMap()
+        .set('click', () => {
+            Cell.all.setVal([])
+            Cell.col.setVal(5)
+            Cell.row.setVal(5)
+            Cell.reflow()
+        }),
+    children: new RNodeGroup([
+        new RTextNode({ text: 'reset' })
+    ])
+})
+
 const cells = new RNodeGroup([
     new RNodeLoop(Cell.all, (c) => new RNodeGroup([
         new RElementNode({
@@ -132,20 +174,35 @@ const cells = new RNodeGroup([
                     const cell = Cell.prepare.getVal()
                     if (!cell)
                         return Cell.prepare.setVal(c)
-                    else{
+                    else {
                         cell.merge(c)
                         Cell.prepare.setVal(null)
                     }
-                    
+
                 }),
             style: new ReactMap()
                 .set('gridArea', new Computed([c.pos], ({
                     left, right, bottom, top
                 }) => `${top + 1}/${left + 1}/${bottom + 2}/${right + 2}`))
-                .set('transition', 'all 0.3s ease-out')
+                .set('transition', 'all 0.2s ease-out')
                 .set('textAlign', "center")
                 .set('cursor', 'pointer')
-                .set('opacity', new Computed([c.hover], h => h ? '0.4' : '1'))
+                .set('boxShadow', new Computed([c.hover], h => h
+                    ? '0 2px 4px rgba(0,0,0,0.2)'
+                    : '0 0 0 rgba(0,0,0,0)'
+                ))
+                .set('borderRadius', new Computed([c.hover], h => h
+                    ? '4px'
+                    : '2px'
+                ))
+                .set('opacity', new Computed([c.hover], h => h
+                    ? '0.9'
+                    : '1'
+                ))
+                .set('transform', new Computed([c.hover], h => h
+                    ? 'translate(0, -2px)'
+                    : 'translate(0, 0px)'
+                ))
                 .set('background', '#66ccff')
                 .set('outline', new Computed([Cell.prepare], cell => cell === c
                     ? `4px solid red`
@@ -154,7 +211,7 @@ const cells = new RNodeGroup([
                 .set('color', '#fff'),
 
             attr: new ReactMap(),
-            children: new RNodeGroup([new RTextNode({ text: `cell` })])
+            children: new RNodeGroup([])
         })
     ]), v => v)
 ])
@@ -165,15 +222,48 @@ const grid = new RElementNode({
     event: new ReactMap(),
     style: new ReactMap()
         .set('display', 'grid')
+        .set("gridArea", 'grid')
         .set('gridTemplateColumns ', new Computed([Cell.col], v => `repeat(${v},auto)`))
-        .set('gridTemplateRows ', new Computed([Cell.row], v => `repeat(${v},auto)`))
+        .set('gridTemplateRows ', new Computed([Cell.row], v => `repeat(${v}, auto)`))
+        .set('height', new Computed([Cell.row], v => `${v * 48 - 8}px`))
         .set('gridColumnGap', '8px')
         .set('gridRowGap', '8px'),
     attr: new ReactMap(),
     children: cells
 })
 
-document.body.appendChild(grid.getNode())
+const text = new RElementNode({
+    tag: 'div',
+    style: new ReactMap()
+        .set("fontSize", '12px')
+        .set("color", '#333')
+        .set("gridArea", 'text'),
+    children: new RNodeGroup([
+        new RTextNode({ text: "点击单元格可合并" })
+    ])
+})
+
+const container = new RElementNode({
+    tag: 'div',
+    event: new ReactMap(),
+    style: new ReactMap()
+        .set('display', 'grid')
+        .set('gridTemplateAreas', `". . ."  "text text text" "grid grid grid"`)
+        .set('gridColumnGap', '8px')
+        .set('gridRowGap', '8px')
+    ,
+    attr: new ReactMap(),
+    children: new RNodeGroup([
+        add_col_btn,
+        add_row_btn,
+        reset_btn,
+        text,
+        grid
+
+    ])
+})
+
+document.body.appendChild(container.getNode())
 
 
 
